@@ -140,11 +140,10 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 
 			List<BugInfo> cluster = this.clusters.get(i);
 			Set<DeveloperInfo> clusterDevs = this.developers.get(i);
+			Map<String, Integer> devContibution = new HashMap<>();
 
 			// average voting per cluster by the developers
 			this.meanVotes[i] = 1.0 / clusterDevs.size();
-
-			Map<String, Integer> devContibution = new HashMap<>();
 
 			double[] clusterFeatures = new double[BugFeatures.NUM_ATTRIBUTES];
 			clustersInfo.add(new BugInfo(System.currentTimeMillis(),
@@ -168,15 +167,12 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 					}
 				}
 			}
-
 			for (DeveloperInfo dev : clusterDevs) {
 				Integer devIndex = devIndexMapping.get(dev.getDevID());
-
 				if (null == devIndex) {
 					devIndex = devIndexMapping.size();
 					devIndexMapping.put(dev.getDevID(), devIndex);
 				}
-
 				this.votesMatrix[i][devIndex] = ((double) devContibution
 						.get(dev.getDevID())) / cluster.size();
 			}
@@ -204,7 +200,6 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 
 			// learn developer features
 			learnDeveloperFeatures(originalDevelopers, originalClusters);
-
 		} while (!stopLearning(originalClusters, this.clustersInfo)
 				|| !stopLearning(originalDevelopers, this.allDevs));
 
@@ -226,16 +221,13 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 			originalDevelopers.add(orginalDev);
 
 			for (int i = 0; i < originalClusters.size(); i++) {
-
 				double[] clusterFeatures = originalClusters.get(i)
 						.getFeatures();
-
 				double y = this.votesMatrix[i][devIndexMapping.get(orginalDev
 						.getDevID())];
 				double dotProduct = dotProduct(orginalDev.getFeatures(),
 						clusterFeatures);
 				double diff = dotProduct - y;
-
 				double[] clusterFeaturesCopy = Arrays.copyOf(clusterFeatures,
 						clusterFeatures.length);
 
@@ -243,7 +235,6 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 					clusterFeaturesCopy[j] = (clusterFeaturesCopy[j] * diff)
 							+ (LAMBDA * orginalDev.getFeatures()[j]);
 				}
-
 				for (int j = 0; j < clusterFeaturesCopy.length; j++) {
 					dev.getFeatures()[j] -= ALPHA * clusterFeaturesCopy[j];
 				}
@@ -271,7 +262,6 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 				double dotProduct = dotProduct(dev.getFeatures(),
 						originalClusters.get(i).getFeatures());
 				double diff = dotProduct - y;
-
 				double[] devFeaturesCopy = Arrays.copyOf(dev.getFeatures(),
 						dev.getDimension());
 
@@ -279,7 +269,6 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 					devFeaturesCopy[j] = (devFeaturesCopy[j] * diff)
 							+ (LAMBDA * originalClusters.get(i).getFeatures()[j]);
 				}
-
 				for (int j = 0; j < clusterFeatures.length; j++) {
 					clusterFeatures[j] -= ALPHA * devFeaturesCopy[j];
 				}
@@ -407,7 +396,6 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 		Collections.sort(devs);
 
 		Set<DeveloperInfo> recommendedDevs = new LinkedHashSet<>();
-
 		for (int i = 0; i < K && i < devs.size(); i++) {
 			recommendedDevs.add(devs.get(i).getDeveloper());
 		}
