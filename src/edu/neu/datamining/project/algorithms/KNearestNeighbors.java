@@ -1,7 +1,5 @@
 package edu.neu.datamining.project.algorithms;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -13,12 +11,10 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import edu.neu.datamining.project.conf.DataConfiguration;
 import edu.neu.datamining.project.data.BugInfo;
 import edu.neu.datamining.project.data.DataPoint;
 import edu.neu.datamining.project.data.DeveloperInfo;
 import edu.neu.datamining.project.utils.DataNormalization;
-import edu.neu.datamining.project.utils.FileUtils;
 
 /**
  * Implementation for kNN algorithm for predicting the labels of data points
@@ -81,9 +77,15 @@ public class KNearestNeighbors implements RecommendationAlgorithm {
 		this.threshold = threshold;
 	}
 
+	/**
+	 * Computes average distance of every point to every other point in the data
+	 * set
+	 * 
+	 * @return returns the average of distance computed as specified
+	 */
 	private double getThreshold() {
 
-		double total = 0;
+		double total = 0.0;
 		for (int i = 0; i < bugDataPoints.size(); i++) {
 			for (int j = i + 1; j < bugDataPoints.size(); j++) {
 				double distance = bugDataPoints.get(i).distance(
@@ -93,25 +95,6 @@ public class KNearestNeighbors implements RecommendationAlgorithm {
 		}
 
 		return total / (bugDataPoints.size() * bugDataPoints.size());
-	}
-
-	/**
-	 * Start point for kNN algorithm
-	 * 
-	 * @param args
-	 * @throws FileNotFoundException
-	 * @throws IOException
-	 */
-	public static void main(String[] args) throws FileNotFoundException,
-			IOException {
-
-		List<BugInfo> bugDataPoints = FileUtils
-				.readBugsInfo(DataConfiguration.BUGS_INFO_FILE_PATH_FIXED_VERIFIED);
-
-		List<DeveloperInfo> developersInfo = FileUtils.getDevelopersInfo();
-
-		KNearestNeighbors knn = new KNearestNeighbors(bugDataPoints,
-				developersInfo);
 	}
 
 	/**
@@ -137,10 +120,10 @@ public class KNearestNeighbors implements RecommendationAlgorithm {
 				.iterator();
 
 		while (iterator.hasNext()) {
-
 			Entry<Double, Set<DataPoint>> entry = iterator.next();
 			Set<DataPoint> bugs = entry.getValue();
 
+			// do not consider bugs which are too far away. Just ignore them
 			if (entry.getKey() > threshold)
 				return developers;
 
@@ -150,15 +133,14 @@ public class KNearestNeighbors implements RecommendationAlgorithm {
 				for (DeveloperInfo dev : devs) {
 					developers.add(dev);
 
-					if (developers.size() >= K) {
+					if (developers.size() >= K)
+						// found top K developers. Return them
 						return developers;
-					}
 				}
 			}
 		}
-
+		// return all the developers found
 		return developers;
-
 	}
 
 	/**
@@ -203,11 +185,7 @@ public class KNearestNeighbors implements RecommendationAlgorithm {
 			neighborCount += neighborEntry.getValue().size();
 		}
 
-		if (neighborCount < K) {
-
-		}
-
-		Set<DeveloperInfo> predictedDevelopers = new HashSet<>();
+		// TODO : implement logic to find top K developers from the nearest bugs
 		return null;
 	}
 
@@ -235,12 +213,10 @@ public class KNearestNeighbors implements RecommendationAlgorithm {
 
 			for (Map.Entry<Double, Set<DataPoint>> entry : map.entrySet()) {
 				Set<DataPoint> devs = kNNMap.get(entry.getKey());
-
-				if (null == devs) {
+				if (null == devs)
 					kNNMap.put(entry.getKey(), entry.getValue());
-				} else {
+				else
 					devs.addAll(entry.getValue());
-				}
 			}
 		}
 
@@ -249,19 +225,16 @@ public class KNearestNeighbors implements RecommendationAlgorithm {
 
 		Iterator<Entry<Double, Set<DataPoint>>> iterator = kNNMap.entrySet()
 				.iterator();
-
 		int neighbourCount = 0;
-
 		while (neighbourCount < K && iterator.hasNext()) {
 			Set<DataPoint> devs = iterator.next().getValue();
 			for (DataPoint dev : devs) {
 				developers.add((DeveloperInfo) dev);
 			}
-
 			// count neighbor bugs not developers
 			neighbourCount++;
 		}
-
+		// return closest developers
 		return developers;
 	}
 
@@ -285,7 +258,6 @@ public class KNearestNeighbors implements RecommendationAlgorithm {
 		SortedMap<Double, Set<DataPoint>> kNNMap = new TreeMap<>();
 
 		for (DataPoint neighbour : dataPoints) {
-
 			// do not calculate distance between same data points
 			if (neighbour.equals(dataPoint))
 				continue;
@@ -296,7 +268,6 @@ public class KNearestNeighbors implements RecommendationAlgorithm {
 			// store them in the map. Map will also store multiple points which
 			// are equi-distant from given data point
 			Set<DataPoint> devs = kNNMap.get(distance);
-
 			if (null == devs) {
 				Set<DataPoint> set = new HashSet<>();
 				set.add(neighbour);
@@ -329,8 +300,7 @@ public class KNearestNeighbors implements RecommendationAlgorithm {
 				neighbourCount++;
 			}
 		}
-
-		// System.out.println(predictedDevelopers.size());
+		// return set of developers to be recommended
 		return predictedDevelopers;
 	}
 }

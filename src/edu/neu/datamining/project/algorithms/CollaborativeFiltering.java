@@ -315,16 +315,15 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 	 * 
 	 * @param vector1
 	 * @param vector2
-	 * @return
+	 * @return dot product of two vectors
 	 */
 	private double dotProduct(double[] vector1, double[] vector2) {
-
-		double val = 0;
+		double product = 0.0;
 		for (int i = 0; i < vector2.length; i++) {
-			val += vector1[i] * vector2[i];
+			product += vector1[i] * vector2[i];
 		}
-
-		return val;
+		// return the product
+		return product;
 	}
 
 	@Override
@@ -389,9 +388,7 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 					devRanking.addContribution(contribution);
 				}
 			}
-
 		}
-
 		List<DevRanking> devs = new ArrayList<>(contributions.values());
 		Collections.sort(devs);
 
@@ -399,7 +396,7 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 		for (int i = 0; i < K && i < devs.size(); i++) {
 			recommendedDevs.add(devs.get(i).getDeveloper());
 		}
-
+		// return top K developers for the given bug
 		return recommendedDevs;
 	}
 }
