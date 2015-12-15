@@ -6,6 +6,13 @@ import java.util.Set;
 
 import org.apache.commons.math3.ml.clustering.Clusterable;
 
+/**
+ * Every object of this class represent one instance of a <tt>bug</tt> used in the
+ * recommendation system
+ * 
+ * @author Ankur Shanbhag
+ *
+ */
 public class BugInfo implements DataPoint, Clusterable {
 
 	private double[] features;
@@ -50,7 +57,7 @@ public class BugInfo implements DataPoint, Clusterable {
 	}
 
 	/**
-	 * Calculates euclidean distance of this point from given point
+	 * Calculates Euclidean distance of this point from given point
 	 * 
 	 * @param point
 	 * @return
@@ -115,9 +122,16 @@ public class BugInfo implements DataPoint, Clusterable {
 
 	@Override
 	public BugInfo clone() {
-		return new BugInfo(bugID, Arrays.copyOf(features, features.length), developers);
+		return new BugInfo(bugID, Arrays.copyOf(features, features.length),
+				developers);
 	}
 
+	/**
+	 * Computes the cosine similarity between this and the given data point if
+	 * it is of the type {@link BugInfo}
+	 * 
+	 * @see edu.neu.datamining.project.data.DataPoint#similarity(edu.neu.datamining.project.data.DataPoint)
+	 */
 	@Override
 	public double similarity(DataPoint point) {
 

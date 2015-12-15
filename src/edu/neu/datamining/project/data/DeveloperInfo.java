@@ -12,18 +12,25 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+/**
+ * Every object of this class represent one instance of a <tt>developer</tt>
+ * used in the recommendation system
+ * 
+ * @author Ankur Shanbhag
+ *
+ */
 public class DeveloperInfo implements DataPoint, Clusterable {
 
 	private final String devID;
 	private static final ObjectMapper mapper;
-	
+
 	static {
 		mapper = new ObjectMapper();
 		mapper.setSerializationInclusion(Include.NON_NULL);
 		mapper.setVisibility(PropertyAccessor.ALL, Visibility.NONE);
 		mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);
 	}
-	
+
 	@JsonIgnore
 	private double[] features;
 
@@ -119,7 +126,8 @@ public class DeveloperInfo implements DataPoint, Clusterable {
 
 	@Override
 	public DeveloperInfo clone() {
-		return new DeveloperInfo(devID, Arrays.copyOf(features, features.length));
+		return new DeveloperInfo(devID,
+				Arrays.copyOf(features, features.length));
 	}
 
 	@Override
@@ -127,8 +135,9 @@ public class DeveloperInfo implements DataPoint, Clusterable {
 		// TODO : implementation of similarity
 		return 0;
 	}
-	
-	public static String serialize(List<DeveloperInfo> list) throws JsonProcessingException {
+
+	public static String serialize(List<DeveloperInfo> list)
+			throws JsonProcessingException {
 		String jsonString = mapper.writeValueAsString(list);
 		System.out.println(jsonString);
 		return jsonString;

@@ -54,7 +54,7 @@ public class KernelKMeans implements DataClusterer {
 		System.out.println("Kernel K-Means Started..");
 		long start = System.currentTimeMillis();
 
-		DataNormalization.normalizeData(dataPoints);
+		DataNormalization.zScoreNormalize(dataPoints);
 		KernelKMeans kkmeans = new KernelKMeans(dataPoints, 10);
 
 		List<Set<DeveloperInfo>> developers = kkmeans.createClusters();

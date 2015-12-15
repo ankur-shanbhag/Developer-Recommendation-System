@@ -1,25 +1,27 @@
 package edu.neu.datamining.project.algorithms;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.math3.ml.clustering.Cluster;
 import org.apache.commons.math3.ml.clustering.DBSCANClusterer;
 
-import edu.neu.datamining.project.conf.DataConfiguration;
 import edu.neu.datamining.project.data.BugInfo;
 import edu.neu.datamining.project.data.DeveloperInfo;
-import edu.neu.datamining.project.utils.DataNormalization;
-import edu.neu.datamining.project.utils.FileUtils;
 
 /**
  * Implementation for DBSCAN algorithm for clustering the data points with
- * n-dimensional features using Euclidean distance method
+ * n-dimensional features using Euclidean distance method.
+ * 
+ * This class internally uses
+ * <tt>org.apache.commons.math3.ml.clustering.DBSCANClusterer</tt> to form
+ * density based clusters<br>
+ * 
+ * @see <a
+ *      href="https://commons.apache.org/proper/commons-math/apidocs/org/apache/commons/math3/ml/clustering/package-summary.html">DBSCANClusterer</a>
+ *
  * 
  * @author Ankur Shanbhag
  * 
@@ -49,89 +51,24 @@ public class DBSCANCluster implements DataClusterer {
 		this.minPoints = minPoints;
 
 		if (this.minPoints > dataPoints.size())
-			throw new RuntimeException("MinPoints cannot have a value greater than total number of data points");
+			throw new RuntimeException(
+					"MinPoints cannot have a value greater than total number of data points");
 
 		// this.eps = calculateEps();
 		this.eps = eps;
 	}
 
 	/**
-	 * Calculates eps based on the mean of MinPoint neighbor values
-	 * 
-	 * @return calculated eps value
+	 * Creates density based clusters for all the data points using DBSCAN
+	 * algorithm.<br>
+	 * Note: Some of the data points which do not form part of any cluster will
+	 * be considered as noise and hence ignored
 	 */
-	private static double calculateEps(List<BugInfo> dataPoints, int minPoints) {
-
-		double sum = 0;
-
-		Map<String, Double> map = new HashMap<>();
-
-		for (int i = 0; i < dataPoints.size(); i++) {
-
-			List<Double> distances = new ArrayList<>();
-			for (int j = 0; j < dataPoints.size(); j++) {
-
-				if (i == j)
-					continue;
-
-				String key = null;
-				if (i < j) {
-					key = i + "," + j;
-				} else {
-					key = j + "," + i;
-				}
-
-				Double val = map.get(key);
-
-				if (null == val) {
-					val = dataPoints.get(i).distance(dataPoints.get(j));
-					map.put(key, val);
-				}
-
-				distances.add(val);
-			}
-
-			// Collections.sort(distances);
-
-			// consider only minpoint neighbor for eps calculation
-			// sum += distances.get(minPoints - 1);
-		}
-
-		return sum / dataPoints.size();
-	}
-
-	private static void minMaxNormalization(List<BugInfo> dataPoints, int pos) {
-
-		double max = dataPoints.get(0).getFeatures()[pos];
-		double min = dataPoints.get(0).getFeatures()[pos];
-
-		for (BugInfo instance : dataPoints) {
-			double time = instance.getFeatures()[pos];
-			if (max < time) {
-				max = time;
-			} else if (min > time) {
-				min = time;
-			}
-		}
-
-		System.out.println(max);
-		System.out.println(min);
-
-		double minMaxDiff = max - min;
-
-		for (BugInfo instance : dataPoints) {
-			double time = instance.getFeatures()[pos];
-			instance.getFeatures()[pos] = (time - min) / minMaxDiff;
-		}
-
-	}
-
 	@Override
 	public List<Set<DeveloperInfo>> createClusters() {
 
-		// DataNormalization.normalizeData(dataPoints);
-
-		DBSCANClusterer<BugInfo> clustering = new DBSCANClusterer<>(this.eps, this.minPoints);
+		DBSCANClusterer<BugInfo> clustering = new DBSCANClusterer<>(this.eps,
+				this.minPoints);
 
 		List<Cluster<BugInfo>> dbscanClusters = clustering.cluster(dataPoints);
 
@@ -168,32 +105,5 @@ public class DBSCANCluster implements DataClusterer {
 	@Override
 	public List<List<BugInfo>> getClusters() {
 		return clusters;
-	}
-
-	public static void main(String[] args) throws IOException {
-
-		List<BugInfo> dataPoints = FileUtils.readBugsInfo(DataConfiguration.BUGS_INFO_FILE_PATH_FIXED);
-
-		System.out.println("Started..");
-		long start = System.currentTimeMillis();
-
-		DataNormalization.normalizeData(dataPoints);
-		DBSCANCluster dbscan = new DBSCANCluster(dataPoints, 2, 30);
-
-		List<Set<DeveloperInfo>> developers = dbscan.createClusters();
-		List<List<BugInfo>> clusters = dbscan.getClusters();
-
-		for (List<BugInfo> cluster : clusters) {
-			System.out.println("Cluster : " + cluster.size());
-		}
-
-		// System.out.println(" ------------------------------------- ");
-		//
-		// for (Set<DeveloperInfo> dev : developers) {
-		// System.out.println("Developers : " + dev.size());
-		// }
-		//
-		// System.out.println("Time taken : "
-		// + (System.currentTimeMillis() - start));
 	}
 }

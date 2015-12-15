@@ -18,10 +18,32 @@ import edu.neu.datamining.project.data.DataPoint;
 import edu.neu.datamining.project.data.DeveloperInfo;
 import edu.neu.datamining.project.utils.DataNormalization;
 
+/**
+ * This class implements Collaborative Filtering (CF) algorithm to provide
+ * recommendations for a new bug instance. <br>
+ * It trains the model by forming clusters of similar <tt>BugInfo</tt> using
+ * <tt>Kernel KMeans</tt> or <tt>DBSCAN</tt> clustering algorithms.<br>
+ * <br>
+ * 
+ * This implementation of CF constructs a vote matrix indicating contribution of
+ * every developer in every cluster. This vote matrix is then used to learn
+ * latent features of all the clusters and developers simultaneously. <br>
+ * 
+ * These learned features are then used to recommend developers for new bug
+ * instance based on some similarity measure between the bug and all the
+ * clusters.
+ * 
+ * @author Ankur Shanbhag
+ * 
+ * @see KNearestNeighbors
+ */
 public class CollaborativeFiltering implements RecommendationAlgorithm {
 
+	// Regularization parameter
 	private static final double LAMBDA = 0.00001;
 	private static final double ALPHA = 0.00001;
+
+	// To stop learning the latent features in gradient descent CF
 	private static final double EPSILON = 0.00001;
 
 	private final List<List<BugInfo>> clusters = new ArrayList<>();
@@ -46,7 +68,7 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 			bugMap.put(bug.getBugID(), bug.clone());
 		}
 
-		DataNormalization.normalizeData(bugs);
+		DataNormalization.zScoreNormalize(bugs);
 		DataClusterer dbscan = new DBSCANCluster(bugs, eps, minPoints);
 		this.developers = dbscan.createClusters();
 		List<List<BugInfo>> dbscanClusters = dbscan.getClusters();
@@ -69,7 +91,7 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 			bugMap.put(bug.getBugID(), bug.clone());
 		}
 
-		DataNormalization.normalizeData(bugs);
+		DataNormalization.zScoreNormalize(bugs);
 		DataClusterer kkmeans = new KernelKMeans(bugs, K);
 		this.developers = kkmeans.createClusters();
 		List<List<BugInfo>> kkmeansClusters = kkmeans.getClusters();
@@ -78,7 +100,8 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 	}
 
 	/**
-	 * Initializes the vote matrix and
+	 * Initializes the vote matrix and train the CF model to learn latent
+	 * features
 	 * 
 	 * @param bugMap
 	 * @param clusters
@@ -107,6 +130,10 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 		trainModel();
 	}
 
+	/**
+	 * Constructs a |Clusters| * |Developers| vote matrix where each vote
+	 * indicates contribution of a developer in the cluster.
+	 */
 	private void initMatrix() {
 
 		for (int i = 0; i < this.clusters.size(); i++) {
@@ -120,7 +147,8 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 			Map<String, Integer> devContibution = new HashMap<>();
 
 			double[] clusterFeatures = new double[BugFeatures.NUM_ATTRIBUTES];
-			clustersInfo.add(new BugInfo(System.currentTimeMillis(), clusterFeatures, null));
+			clustersInfo.add(new BugInfo(System.currentTimeMillis(),
+					clusterFeatures, null));
 
 			for (BugInfo bug : cluster) {
 				double[] bugFeatures = bug.getFeatures();
@@ -149,34 +177,47 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 					devIndexMapping.put(dev.getDevID(), devIndex);
 				}
 
-				this.votesMatrix[i][devIndex] = ((double) devContibution.get(dev.getDevID())) / cluster.size();
+				this.votesMatrix[i][devIndex] = ((double) devContibution
+						.get(dev.getDevID())) / cluster.size();
 			}
 		}
 
-		DataNormalization.normalizeData(clustersInfo);
-		DataNormalization.normalizeData(allDevs);
+		DataNormalization.zScoreNormalize(clustersInfo);
+		DataNormalization.zScoreNormalize(allDevs);
 	}
 
+	/**
+	 * Trains the CF model using gradient descent algorithm to learn the feature
+	 * values for all the clusters and developers simultaneously
+	 */
 	public void trainModel() {
 
 		List<BugInfo> originalClusters = new ArrayList<>();
 		List<DeveloperInfo> originalDevelopers = new ArrayList<>();
 
-		int count = 0;
 		do {
-			count++;
 			originalClusters.clear();
 			originalDevelopers.clear();
 
+			// learn cluster features
 			learnClusterFeatures(originalClusters);
+
+			// learn developer features
 			learnDeveloperFeatures(originalDevelopers, originalClusters);
 
-		} while (!converged(originalClusters, this.clustersInfo) || !converged(originalDevelopers, this.allDevs));
+		} while (!stopLearning(originalClusters, this.clustersInfo)
+				|| !stopLearning(originalDevelopers, this.allDevs));
 
-//		System.out.println("Iterations : " + count);
 	}
 
-	private void learnDeveloperFeatures(List<DeveloperInfo> originalDevelopers, List<BugInfo> originalClusters) {
+	/**
+	 * Learns the feature values for all the developers
+	 * 
+	 * @param originalDevelopers
+	 * @param originalClusters
+	 */
+	private void learnDeveloperFeatures(List<DeveloperInfo> originalDevelopers,
+			List<BugInfo> originalClusters) {
 
 		for (DeveloperInfo dev : this.allDevs) {
 
@@ -186,16 +227,21 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 
 			for (int i = 0; i < originalClusters.size(); i++) {
 
-				double[] clusterFeatures = originalClusters.get(i).getFeatures();
+				double[] clusterFeatures = originalClusters.get(i)
+						.getFeatures();
 
-				double y = this.votesMatrix[i][devIndexMapping.get(orginalDev.getDevID())];
-				double dotProduct = dotProduct(orginalDev.getFeatures(), clusterFeatures);
+				double y = this.votesMatrix[i][devIndexMapping.get(orginalDev
+						.getDevID())];
+				double dotProduct = dotProduct(orginalDev.getFeatures(),
+						clusterFeatures);
 				double diff = dotProduct - y;
 
-				double[] clusterFeaturesCopy = Arrays.copyOf(clusterFeatures, clusterFeatures.length);
+				double[] clusterFeaturesCopy = Arrays.copyOf(clusterFeatures,
+						clusterFeatures.length);
 
 				for (int j = 0; j < clusterFeaturesCopy.length; j++) {
-					clusterFeaturesCopy[j] = (clusterFeaturesCopy[j] * diff) + (LAMBDA * orginalDev.getFeatures()[j]);
+					clusterFeaturesCopy[j] = (clusterFeaturesCopy[j] * diff)
+							+ (LAMBDA * orginalDev.getFeatures()[j]);
 				}
 
 				for (int j = 0; j < clusterFeaturesCopy.length; j++) {
@@ -205,6 +251,11 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 		}
 	}
 
+	/**
+	 * Learns the feature values for all the clusters
+	 * 
+	 * @param originalClusters
+	 */
 	private void learnClusterFeatures(List<BugInfo> originalClusters) {
 
 		for (int i = 0; i < this.clustersInfo.size(); i++) {
@@ -215,11 +266,14 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 
 			for (DeveloperInfo dev : allDevs) {// should be done only for devs
 												// in this cluster
-				double y = this.votesMatrix[i][devIndexMapping.get(dev.getDevID())];
-				double dotProduct = dotProduct(dev.getFeatures(), originalClusters.get(i).getFeatures());
+				double y = this.votesMatrix[i][devIndexMapping.get(dev
+						.getDevID())];
+				double dotProduct = dotProduct(dev.getFeatures(),
+						originalClusters.get(i).getFeatures());
 				double diff = dotProduct - y;
 
-				double[] devFeaturesCopy = Arrays.copyOf(dev.getFeatures(), dev.getDimension());
+				double[] devFeaturesCopy = Arrays.copyOf(dev.getFeatures(),
+						dev.getDimension());
 
 				for (int j = 0; j < clusterFeatures.length; j++) {
 					devFeaturesCopy[j] = (devFeaturesCopy[j] * diff)
@@ -233,10 +287,21 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 		}
 	}
 
-	private boolean converged(Collection<? extends DataPoint> originalPoints,
+	/**
+	 * Determines if the features values for given data points are in the
+	 * {@link #EPSILON} distance across two consecutive iterations of gradient
+	 * descent Cf algorithm
+	 * 
+	 * @param originalPoints
+	 * @param newPoints
+	 * @return true if the given data points are in {@link #EPSILON} distance
+	 */
+	private boolean stopLearning(
+			Collection<? extends DataPoint> originalPoints,
 			Collection<? extends DataPoint> newPoints) {
 
-		Iterator<? extends DataPoint> originalIterator = originalPoints.iterator();
+		Iterator<? extends DataPoint> originalIterator = originalPoints
+				.iterator();
 		Iterator<? extends DataPoint> newIterator = newPoints.iterator();
 
 		while (originalIterator.hasNext() && newIterator.hasNext()) {
@@ -245,19 +310,29 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 
 			for (int j = 0; j < newFeatures.length; j++) {
 				if (Math.abs(originalFeatures[j] - newFeatures[j]) > EPSILON)
+					// keep learning
 					return false;
 			}
 
 		}
 
+		// stop learning
 		return true;
 	}
 
-	private double dotProduct(double[] devFeatures, double[] clusterFeatures) {
+	/**
+	 * Computes dot products of the given vectors assuming they are of the same
+	 * length
+	 * 
+	 * @param vector1
+	 * @param vector2
+	 * @return
+	 */
+	private double dotProduct(double[] vector1, double[] vector2) {
 
 		double val = 0;
-		for (int i = 0; i < clusterFeatures.length; i++) {
-			val += devFeatures[i] * clusterFeatures[i];
+		for (int i = 0; i < vector2.length; i++) {
+			val += vector1[i] * vector2[i];
 		}
 
 		return val;
@@ -273,7 +348,8 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 			double contribution;
 			DeveloperInfo developer;
 
-			DevRanking(int devIndex, double contribution, DeveloperInfo developer) {
+			DevRanking(int devIndex, double contribution,
+					DeveloperInfo developer) {
 				this.devIndex = devIndex;
 				this.contribution = contribution;
 				this.developer = developer;
@@ -318,7 +394,8 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 
 				DevRanking devRanking = contributions.get(devIndex);
 				if (null == devRanking) {
-					contributions.put(devIndex, new DevRanking(devIndex, contribution, dev));
+					contributions.put(devIndex, new DevRanking(devIndex,
+							contribution, dev));
 				} else {
 					devRanking.addContribution(contribution);
 				}
@@ -334,7 +411,7 @@ public class CollaborativeFiltering implements RecommendationAlgorithm {
 		for (int i = 0; i < K && i < devs.size(); i++) {
 			recommendedDevs.add(devs.get(i).getDeveloper());
 		}
-		
+
 		return recommendedDevs;
 	}
 }

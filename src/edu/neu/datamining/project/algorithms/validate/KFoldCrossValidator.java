@@ -17,21 +17,25 @@ import edu.neu.datamining.project.utils.FileUtils;
 
 /**
  * This class implements K-fold cross validation for evaluating the
- * recommendation algorithms implemented
+ * recommendation algorithms using hit rate techinique
  * 
  * @author Ankur Shanbhag
  *
  */
-public class KFoldCrossValidation {
+public class KFoldCrossValidator {
 
+	/**
+	 * Number of folds to be used for evaluation
+	 */
 	private final int K_FOLDS;
 
-	public KFoldCrossValidation(int K) {
+	public KFoldCrossValidator(int K) {
 		this.K_FOLDS = K;
 	}
 
-	private double predictFoldAccuracy(List<BugInfo> bugTrainPoints, List<BugInfo> testPoints,
-			List<DeveloperInfo> developers, AlgorithmType algorithm) {
+	private double predictFoldAccuracy(List<BugInfo> bugTrainPoints,
+			List<BugInfo> testPoints, List<DeveloperInfo> developers,
+			AlgorithmType algorithm) {
 
 		double accuratePredictions = 0;
 
@@ -53,7 +57,8 @@ public class KFoldCrossValidation {
 
 		// check accuracy of prediction
 		for (BugInfo bugTestPoint : testPoints) {
-			Set<DeveloperInfo> predictedDevelopers = recommender.recommendDevelopers(bugTestPoint, 10);
+			Set<DeveloperInfo> predictedDevelopers = recommender
+					.recommendDevelopers(bugTestPoint, 10);
 
 			for (DeveloperInfo actualDeveloper : bugTestPoint.getDevelopers()) {
 				if (predictedDevelopers.contains(actualDeveloper)) {
@@ -74,7 +79,8 @@ public class KFoldCrossValidation {
 	 * @param dataPoints
 	 *            - data points to validate the kNN algorithm
 	 */
-	public void crossValidate(List<BugInfo> dataPoints, List<DeveloperInfo> developers, AlgorithmType algorithm) {
+	public void crossValidate(List<BugInfo> dataPoints,
+			List<DeveloperInfo> developers, AlgorithmType algorithm) {
 
 		// fold size for computing folds of same size
 		final int foldSize = dataPoints.size() / K_FOLDS;
@@ -106,11 +112,13 @@ public class KFoldCrossValidation {
 				}
 			}
 
-			double accuratePredictions = predictFoldAccuracy(trainPoints, testPoints, developers, algorithm);
+			double accuratePredictions = predictFoldAccuracy(trainPoints,
+					testPoints, developers, algorithm);
 
 			accuracyRate += (accuratePredictions / testPoints.size());
 
-			System.out.println("Prediction accuracy for test data as fold" + (i + 1) + " : "
+			System.out.println("Prediction accuracy for test data as fold"
+					+ (i + 1) + " : "
 					+ (accuratePredictions / testPoints.size()));
 		}
 
@@ -129,7 +137,8 @@ public class KFoldCrossValidation {
 	 *            - size limit for every fold
 	 * @return list of all the folds computed randomly by this method
 	 */
-	private List<List<BugInfo>> createFolds(List<BugInfo> dataPoints, int foldSize) {
+	private List<List<BugInfo>> createFolds(List<BugInfo> dataPoints,
+			int foldSize) {
 
 		List<BugInfo> list = new ArrayList<>(dataPoints);
 
@@ -145,7 +154,8 @@ public class KFoldCrossValidation {
 				foldDataList.add(list.subList(i * foldSize, list.size()));
 			} else {
 				// last fold will utmost (k-1) elements more or less
-				foldDataList.add(list.subList(i * foldSize, (i + 1) * foldSize));
+				foldDataList
+						.add(list.subList(i * foldSize, (i + 1) * foldSize));
 			}
 		}
 
@@ -153,29 +163,31 @@ public class KFoldCrossValidation {
 		return foldDataList;
 	}
 
-	public static void main(String[] args) throws FileNotFoundException, IOException {
+	public static void main(String[] args) throws FileNotFoundException,
+			IOException {
 
 		// Read bug data from file
-		List<BugInfo> bugsInfo = FileUtils.readBugsInfo(DataConfiguration.BUGS_INFO_FILE_PATH_FIXED);
+		List<BugInfo> bugsInfo = FileUtils
+				.readBugsInfo(DataConfiguration.BUGS_INFO_FILE_PATH_FIXED);
 		List<DeveloperInfo> developersInfo = FileUtils.getDevelopersInfo();
 
-		// // Validate KNN algorithm
-		// System.out.println("Starting KNN ...");
-		// KFoldCrossValidation kNNValidator = new KFoldCrossValidation(5);
-		// kNNValidator.crossValidate(bugsInfo, developersInfo,
-		// AlgorithmType.KNN);
+		// Validate KNN algorithm
+		System.out.println("Starting KNN ...");
+		KFoldCrossValidator kNNValidator = new KFoldCrossValidator(5);
+		kNNValidator.crossValidate(bugsInfo, developersInfo, AlgorithmType.KNN);
 
 		// validate Collaborative filtering with Kernel KMeans
-		System.out.println("Starting Collaborative filtering with Kernel KMeans ...");
-		KFoldCrossValidation cfKKmeansValidator = new KFoldCrossValidation(5);
-		cfKKmeansValidator.crossValidate(bugsInfo, developersInfo, AlgorithmType.COLLABORATIVE_FILTERING_KKMEANS);
+		System.out
+				.println("Starting Collaborative filtering with Kernel KMeans ...");
+		KFoldCrossValidator cfKKmeansValidator = new KFoldCrossValidator(5);
+		cfKKmeansValidator.crossValidate(bugsInfo, developersInfo,
+				AlgorithmType.COLLABORATIVE_FILTERING_KKMEANS);
 
-		// // validate Collaborative filtering with DBSCAN
-		// System.out.println("Starting Collaborative filtering with DBSCAN
-		// ...");
-		// KFoldCrossValidation cfDBScanValidator = new KFoldCrossValidation(5);
-		// cfDBScanValidator.crossValidate(bugsInfo, developersInfo,
-		// AlgorithmType.COLLABORATIVE_FILTERING_DBSCAN);
+		// validate Collaborative filtering with DBSCAN
+		System.out.println("Starting Collaborative filtering with DBSCAN...");
+		KFoldCrossValidator cfDBScanValidator = new KFoldCrossValidator(5);
+		cfDBScanValidator.crossValidate(bugsInfo, developersInfo,
+				AlgorithmType.COLLABORATIVE_FILTERING_DBSCAN);
 
 	}
 }

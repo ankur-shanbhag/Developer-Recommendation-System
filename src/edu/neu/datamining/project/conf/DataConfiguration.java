@@ -5,7 +5,7 @@ package edu.neu.datamining.project.conf;
  * 
  * @author Ankur Shanbhag
  */
-public class DataConfiguration {
+public final class DataConfiguration {
 
 	public static final String GROUP_ALIAS_FILE_PATH = "data/group-alias-email-ids.txt";
 

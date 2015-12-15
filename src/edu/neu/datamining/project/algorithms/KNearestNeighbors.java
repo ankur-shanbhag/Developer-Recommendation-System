@@ -51,8 +51,8 @@ public class KNearestNeighbors implements RecommendationAlgorithm {
 		for (DeveloperInfo dev : devInfos)
 			this.devDataPoints.add(dev.clone());
 
-		DataNormalization.normalizeData(bugDataPoints);
-		DataNormalization.normalizeData(devDataPoints);
+		DataNormalization.zScoreNormalize(bugDataPoints);
+		DataNormalization.zScoreNormalize(devDataPoints);
 
 		this.threshold = getThreshold();
 	}
@@ -72,8 +72,8 @@ public class KNearestNeighbors implements RecommendationAlgorithm {
 		for (DeveloperInfo dev : devInfos)
 			this.devDataPoints.add(dev.clone());
 
-		DataNormalization.normalizeData(bugDataPoints);
-		DataNormalization.normalizeData(devDataPoints);
+		DataNormalization.zScoreNormalize(bugDataPoints);
+		DataNormalization.zScoreNormalize(devDataPoints);
 
 		this.threshold = threshold;
 	}
